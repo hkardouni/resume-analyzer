@@ -129,7 +129,7 @@ form {
 }
 
 @utility primary-gradient {
-  background: linear-gradient(to bottom, #8e98ff, #606beb);
+  background: linear-gradient(to bottom, #413eff, #413eff);
   box-shadow: 0px 74px 21px 0px #6678ef00;
 }
 
