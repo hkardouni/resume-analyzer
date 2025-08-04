@@ -328,31 +328,55 @@ export const usePuterStore = create<PuterStore>((set, get) => {
   };
 
   const feedback = async (path: string, message: string) => {
-    const puter = getPuter();
-    if (!puter) {
-      setError("Puter.js not available");
-      return;
-    }
+  const puter = getPuter();
+  if (!puter) {
+    setError("Puter.js not available");
+    return;
+  }
 
-    return puter.ai.chat(
-      [
-        {
-          role: "user",
-          content: [
-            {
-              type: "file",
-              puter_path: path,
-            },
-            {
-              type: "text",
-              text: message,
-            },
-          ],
-        },
-      ],
-      { model: "claude-3-7-sonnet" }
-    ) as Promise<AIResponse | undefined>;
-  };
+  let searchResults = "";
+  try {
+    const res = await fetch(
+      "https://api.duckduckgo.com/?q=" +
+        encodeURIComponent(message) +
+        "&format=json&no_redirect=1&no_html=1"
+    );
+
+    const data = await res.json();
+
+    if (data.AbstractText) {
+      searchResults += `Abstract: ${data.AbstractText}\n\n`;
+    }
+    if (Array.isArray(data.RelatedTopics)) {
+      searchResults += data.RelatedTopics.slice(0, 3)
+        .map((t: any) => `- ${t.Text || ""} (${t.FirstURL || ""})`)
+        .join("\n");
+    }
+  } catch (err) {
+    console.error("DuckDuckGo API error:", err);
+  }
+
+  const finalPrompt = `
+User message: ${message}
+
+Extra context from DuckDuckGo:
+${searchResults || "No extra context found."}
+  `;
+
+  return puter.ai.chat(
+    [
+      {
+        role: "user",
+        content: [
+          { type: "file", puter_path: path },
+          { type: "text", text: finalPrompt },
+        ],
+      },
+    ],
+    { model: "claude-3-7-sonnet" }
+  ) as Promise<AIResponse | undefined>;
+};
+
 
   const img2txt = async (image: string | File | Blob, testMode?: boolean) => {
     const puter = getPuter();
